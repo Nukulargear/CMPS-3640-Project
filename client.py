@@ -1,6 +1,7 @@
 import socket
 import sys
 import threading
+import time
 
 close_client_flag = 1
 
@@ -36,7 +37,6 @@ def send():
 		print('Closing Client')
 	
 		
-		
 def listen():
 	global close_client_flag
 	
@@ -47,7 +47,16 @@ def listen():
 			
 	sock.close()
 	
-
+	
+#keep alive	
+def keepAlive():
+	global close_client_flag
+	
+	while close_client_flag:
+		time.sleep(5)
+		string = 'Keep Alive thread'
+		sock.sendall(string.encode())
+		
 
 
 		
@@ -66,7 +75,10 @@ sock.connect(server_address)
 
 t1 = sendThread(sock)
 t2 = receiveThread(sock)
+#t3 = keepAlive()
 t1.start()
 t2.start()
+#t3.start()
 t1.join()
 t2.join()
+#t3.join()

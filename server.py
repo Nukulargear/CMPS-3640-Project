@@ -1,11 +1,11 @@
 import socket
 import sys
-import psycopg2
+#import psycopg2
 import datetime
 from threading import *
 
 # Database
-
+'''
 try:
 	connect_str = "dbname='oxysquare' user='pi' host='sharadeos.ddns.net' " + \
 				"password='Dol0Rubx'"
@@ -25,7 +25,7 @@ except Exception as e:
 	print("Failed to Connect to Database Server")
 	print(e)
 
-
+'''
 
 class client(Thread):
 	def __init__(self, socket, address):
