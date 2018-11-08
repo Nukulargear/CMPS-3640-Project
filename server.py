@@ -1,10 +1,18 @@
 import socket
 import sys
+import queue
 #import psycopg2
 import datetime
-from threading import *
+import threading
+from _thread import *
 
 # Database
+# Things to do:
+# GUI
+# Server Promotion
+# Keep Alive
+
+
 '''
 try:
 	connect_str = "dbname='oxysquare' user='pi' host='sharadeos.ddns.net' " + \
@@ -27,45 +35,46 @@ except Exception as e:
 
 '''
 
-class client(Thread):
-	def __init__(self, socket, address):
-		Thread.__init__(self)
-		self.sock = socket
-		self.addr = address
-		self.close_client_flag = 1
-		self.start()
-		print('Connection Confirmation', client_address)
+class ThreadedServer(object):
+	def __init__(self, host, port):
+		self.host = host
+		self.port = port
+		self.sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+		self.sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+		self.sock.bind((self.host, self.port))
+		print('Server is up and running.')
 
-	def run(self):
-		while self.close_client_flag:
-			data = client_socket.recv(1024).decode()
-			if data == 'shutdown':
-				print('Closing Client...')
-				self.close_client_flag = 0
-				self.sock.close()
-				break
-				
-			print('Client Message:', data)
-			string = str(datetime.datetime.now())
-			self.sock.send(string.encode())
-
+	def listen(self):
+		self.sock.listen(5)
+		while True:
+			client, address = self.sock.accept()
+			client.settimeout(60)
+			threading.Thread(target = self.listenToClient,args = (client,address)).start()
 		
+			
+	def listenToClient(self, client, address):
+		size = 1024
+		while True:
+			try:
+				data = client.recv(size)
+				if data:
+					# Set the response to echo back the recieved data 
+					print('Client Message:', data)
+					string = str(datetime.datetime.now())
+					client.send(string.encode())
+				else:
+					raise error('Client disconnected')
+			except:
+				client.close()
+				return False
 
-#Create a TCP/IP socket
-server_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+if __name__ == "__main__":
+	while True:
+		port_num = input("Port? ")
+		try:
+			port_num = int(port_num)
+			break
+		except ValueError:
+			pass
 
-#Connect the socket to the port where the client will send and listen
-server_address = ('localhost', 10000)
-#different way of printing
-print('Setting up Server on {} port {}'.format(*server_address))
-
-server_socket.bind(server_address)
-
-server_socket.listen(1)
-
-serverCloseFlag = 1
-
-while serverCloseFlag:
-	# Wait for a connection)
-	client_socket, client_address = server_socket.accept()
-	client(client_socket, client_address)
+	ThreadedServer('',port_num).listen()

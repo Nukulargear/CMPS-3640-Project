@@ -27,7 +27,7 @@ def send():
 	try:
 		while close_client_flag:
 			message = (input(""))
-			print('Sending {!r}'.format(message))
+			#print('Sending {!r}'.format(message))
 			sock.sendall(message.encode())
 			
 			if message == 'shutdown':
@@ -66,7 +66,10 @@ def keepAlive():
 sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 
 # Connect the socket to the port where the server is listening
-server_address = ('localhost', 10000)
+port_num = input("Port? ")
+
+
+server_address = ('localhost', int(port_num))
 print('Connecting to {} port {}'.format(*server_address))
 print('To close the connection, send [shutdown]')
 sock.connect(server_address)
