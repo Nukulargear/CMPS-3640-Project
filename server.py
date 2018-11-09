@@ -15,8 +15,8 @@ from _thread import *
 
 '''
 try:
-	connect_str = "dbname='oxysquare' user='pi' host='sharadeos.ddns.net' " + \
-				"password='Dol0Rubx'"
+	connect_str = "dbname='' user='' host='sharadeos.ddns.net' " + \
+				"password=''"
 	# use our connection values to establish a connection
 	conn = psycopg2.connect(connect_str)
 	# create a psycopg2 cursor that can execute queries
