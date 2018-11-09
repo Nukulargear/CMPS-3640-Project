@@ -12,6 +12,8 @@ from _thread import *
 # Server Promotion
 # Keep Alive
 
+# 11/8/18 multiple client operation is functional
+
 
 '''
 try:
