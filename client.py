@@ -1,31 +1,26 @@
-import socket
-import sys
-import threading
-from _thread import *
-
-import time
-
 from base import *
 
 class basicClient(base):
 	def __init__(self, name, port):
-		base.__init__(self, name, port)
+		base.__init__(self, name, port, 'client')
 		
 		self.sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-		self.server_address = ('localhost', int(port_num))
+		self.server_address = ('localhost', int(self.port))
 		self.sock.connect(self.server_address)
 		
 		print('Connecting to {} port {}'.format(*self.server_address))
 		print('To close the connection, send [shutdown]')
 
 		
+
+		
 	def begin(self):
 		
-		threading.Thread(target = self.send,args = ()).start()
+		
 		threading.Thread(target = self.listenToServer,args = ()).start()
 		threading.Thread(target = self.keepAlive,args = ()).start()
 		
-
+		self.userInput()
 				
 	def listenToServer(self):
 		
@@ -34,23 +29,44 @@ class basicClient(base):
 			if len(data) > 0:
 				print('Server Timestamp:', data)
 				
-		self.sock.close()
-		
+	
 		
 	#keep alive	
 	def keepAlive(self):
 
-		
 		while self.close_self_flag:
-			time.sleep(5)
+			time.sleep(10)
 			string = 'Keep Alive thread'
 			self.sock.sendall(string.encode())
 		
+		
+			
+	def userInput(self):
+		try:
+			while self.close_self_flag:
+				message = (input(""))
+				parsed_message = message.split("/")
+				
+				#print('Sending {!r}'.format(message))
+				if message == 'shutdown':
+				
+					self.close_self_flag = 0
+					self.sock.close()
+					sys.exit(0)
+				
+				elif parsed_message[0] == 'send':
+					print(parsed_message[1])
+				
+				else:	
+					self.sock.sendall(message.encode())
+				
+		
+		finally:
+			print('Shutting down...')
+	
 
-	
-	
-	
 if __name__ == "__main__":
+	'''	
 	while True:
 		port_num = input("Port? ")
 		try:
@@ -58,5 +74,5 @@ if __name__ == "__main__":
 			break
 		except ValueError:
 			pass
-
-	basicClient('',port_num).begin()
+	'''
+	basicClient('localhost', 8080).begin()

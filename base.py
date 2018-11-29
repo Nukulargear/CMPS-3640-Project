@@ -1,19 +1,20 @@
+import socket
+import sys
+import queue
+#import psycopg2
+import datetime
+import threading
+import time
+from _thread import *
+
+
 class base(object):
 
-	def __init__(self, name, port):
+	def __init__(self, name, port, type):
+	
 		self.name = name
 		self.port = port
+		self.type = type
 		self.close_self_flag = 1
 		
-	def send(self):
-		try:
-			while self.close_self_flag:
-				message = (input(""))
-				#print('Sending {!r}'.format(message))
-				self.sock.sendall(message.encode())
-				
-				if message == 'shutdown':
-					self.close_self_flag = 0
-					break
-		finally:
-			print('Closing Self')
+		print(self.type, ':', self.port, 'is setting up.')

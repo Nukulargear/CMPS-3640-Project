@@ -1,11 +1,3 @@
-import socket
-import sys
-import queue
-#import psycopg2
-import datetime
-import threading
-from _thread import *
-
 from base import * 
 
 # Database
@@ -37,41 +29,96 @@ except Exception as e:
 
 '''
 
-class basicServer(object):
+class basicServer(base):
 	def __init__(self, name, port):
-		
-		base.__init__(self, name, port)
-		
+		base.__init__(self, name, port, 'server')
+
 		self.sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 		self.sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
 		self.sock.bind((self.name, self.port))
-		print('Server is up and running.')
+		self.size = 1024
+		
+		self.client_list = []
+		
+	
 
 	def begin(self):
+		threading.Thread(target = self.clientManager,args = ()).start()
+		
+		self.userInput()
+		
+	
+	
+		
+	def clientManager(self):
 		self.sock.listen(5)
-		while True:
+		
+		while self.close_self_flag:
+			
 			client, address = self.sock.accept()
+			
 			client.settimeout(60)
+			
+			self.client_list.append([client, address])
+			
+			print(client, address)
+			
 			threading.Thread(target = self.listenToClient,args = (client,address)).start()
+			
+
 		
 			
 	def listenToClient(self, client, address):
-		size = 1024
-		while True:
+		
+		
+		while self.close_self_flag:
 			try:
-				data = client.recv(size)
+				data = client.recv(self.size)
+				
 				if data:
 					# Set the response to echo back the recieved data 
 					print('Client Message:', data)
 					string = str(datetime.datetime.now())
 					client.send(string.encode())
+					
 				else:
 					raise error('Client disconnected')
 			except:
 				client.close()
 				return False
+		
+		client.close()
+		
+			
+	def userInput(self):
+		try:
+			while self.close_self_flag:
+				message = (input(""))
+				parsed_message = message.split("/")
+				
+				#print('Sending {!r}'.format(message))
+				if message == 'shutdown':
+				
+					self.close_self_flag = 0
+					
+					for client, address in self.client_list:
+						client.close()
+						
+					self.sock.close()
+					
+					sys.exit(0)
+					break
 
+				elif parsed_message[0] == 'send':
+					print(parsed_message[1])
+				
+		
+		finally:
+			print('Shutting down...')
+			
+			
 if __name__ == "__main__":
+	'''
 	while True:
 		port_num = input("Port? ")
 		try:
@@ -79,5 +126,5 @@ if __name__ == "__main__":
 			break
 		except ValueError:
 			pass
-
-	basicServer('',port_num).begin()
+	'''
+	basicServer('localhost', 8080).begin()
