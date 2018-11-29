@@ -6,6 +6,8 @@ import datetime
 import threading
 from _thread import *
 
+from base import * 
+
 # Database
 # Things to do:
 # GUI
@@ -35,16 +37,17 @@ except Exception as e:
 
 '''
 
-class ThreadedServer(object):
-	def __init__(self, host, port):
-		self.host = host
-		self.port = port
+class basicServer(object):
+	def __init__(self, name, port):
+		
+		base.__init__(self, name, port)
+		
 		self.sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 		self.sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
-		self.sock.bind((self.host, self.port))
+		self.sock.bind((self.name, self.port))
 		print('Server is up and running.')
 
-	def listen(self):
+	def begin(self):
 		self.sock.listen(5)
 		while True:
 			client, address = self.sock.accept()
@@ -77,4 +80,4 @@ if __name__ == "__main__":
 		except ValueError:
 			pass
 
-	ThreadedServer('',port_num).listen()
+	basicServer('',port_num).begin()

@@ -1,87 +1,62 @@
 import socket
 import sys
 import threading
+from _thread import *
+
 import time
 
-close_client_flag = 1
+from base import *
 
-class sendThread (threading.Thread):
-	def __init__(self, socket):
-		threading.Thread.__init__(self)
-		self.socket = socket
+class basicClient(base):
+	def __init__(self, name, port):
+		base.__init__(self, name, port)
 		
-	def run(self):
-		send()
+		self.sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+		self.server_address = ('localhost', int(port_num))
+		self.sock.connect(self.server_address)
 		
-class receiveThread (threading.Thread):
-	def __init__(self, socket):
-		threading.Thread.__init__(self)
-		self.socket = socket
+		print('Connecting to {} port {}'.format(*self.server_address))
+		print('To close the connection, send [shutdown]')
+
 		
-	def run(self):
-		listen()
+	def begin(self):
+		
+		threading.Thread(target = self.send,args = ()).start()
+		threading.Thread(target = self.listenToServer,args = ()).start()
+		threading.Thread(target = self.keepAlive,args = ()).start()
 		
 
-def send():
-	global close_client_flag
-	try:
-		while close_client_flag:
-			message = (input(""))
-			#print('Sending {!r}'.format(message))
-			sock.sendall(message.encode())
-			
-			if message == 'shutdown':
-				close_client_flag = 0
-				break
-	finally:
-		print('Closing Client')
+				
+	def listenToServer(self):
+		
+		while self.close_self_flag:
+			data = self.sock.recv(1024).decode()
+			if len(data) > 0:
+				print('Server Timestamp:', data)
+				
+		self.sock.close()
+		
+		
+	#keep alive	
+	def keepAlive(self):
+
+		
+		while self.close_self_flag:
+			time.sleep(5)
+			string = 'Keep Alive thread'
+			self.sock.sendall(string.encode())
+		
+
 	
-		
-def listen():
-	global close_client_flag
-	
-	while close_client_flag:
-		data = sock.recv(1024).decode()
-		if len(data) > 0:
-			print('Server Timestamp:', data)
-			
-	sock.close()
 	
 	
-#keep alive	
-def keepAlive():
-	global close_client_flag
-	
-	while close_client_flag:
-		time.sleep(5)
-		string = 'Keep Alive thread'
-		sock.sendall(string.encode())
-		
+if __name__ == "__main__":
+	while True:
+		port_num = input("Port? ")
+		try:
+			port_num = int(port_num)
+			break
+		except ValueError:
+			pass
 
-
-		
-
-
-#Create a TCP/IP socket
-sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-
-# Connect the socket to the port where the server is listening
-port_num = input("Port? ")
-
-
-server_address = ('localhost', int(port_num))
-print('Connecting to {} port {}'.format(*server_address))
-print('To close the connection, send [shutdown]')
-sock.connect(server_address)
-
-
-
-t1 = sendThread(sock)
-t2 = receiveThread(sock)
-#t3 = keepAlive()
-t1.start()
-t2.start()
-#t3.start()
-t1.join()
-t2.join()
-#t3.join()
+	basicClient('',port_num).begin()
