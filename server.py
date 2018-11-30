@@ -4,7 +4,7 @@ from base import *
 # Things to do:
 # GUI
 # Server Promotion
-# Keep Alive
+# Identifying Server Address
 
 
 '''
@@ -36,7 +36,7 @@ class basicServer(base):
 		self.sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 		self.sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
 		self.sock.bind((self.name, self.port))
-		self.size = 1024
+		
 		
 		self.client_list = []
 		
@@ -97,7 +97,7 @@ class basicServer(base):
 				parsed_message = message.split("/")
 				
 				#print('Sending {!r}'.format(message))
-				if message == 'shutdown':
+				if parsed_message[0] == 'shutdown':
 				
 					self.close_self_flag = 0
 					
@@ -111,6 +111,14 @@ class basicServer(base):
 
 				elif parsed_message[0] == 'send':
 					print(parsed_message[1])
+					
+				elif parsed_message[0] == 'sendall':
+					for client in self.client_list:
+						client.send(message[1].encode())
+				
+				elif parsed_message[0] == 'swarm':
+					for client, address in self.client_list:
+						print(client)
 				
 		
 		finally:

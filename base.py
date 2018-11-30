@@ -15,6 +15,7 @@ class base(object):
 		self.name = name
 		self.port = port
 		self.type = type
+		self.size = 1024
 		self.close_self_flag = 1
 		
 		print(self.type, ':', self.port, 'is setting up.')

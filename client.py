@@ -25,7 +25,7 @@ class basicClient(base):
 	def listenToServer(self):
 		
 		while self.close_self_flag:
-			data = self.sock.recv(1024).decode()
+			data = self.sock.recv(self.size).decode()
 			if len(data) > 0:
 				print('Server Timestamp:', data)
 				
