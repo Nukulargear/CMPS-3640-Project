@@ -56,19 +56,24 @@ class basicServer(base):
 		while self.close_self_flag:
 			
 			client, address = self.sock.accept()
-			
+			#receive intitial name
+			try:
+				client_name = client.recv(self.size)
+				print(client_name, 'has joined.')
+			except:
+				return False
 			client.settimeout(60)
 			
-			self.client_list.append([client, address])
+			self.client_list.append(client)
 			
-			print(client, address)
+			print(client, address, )
 			
-			threading.Thread(target = self.listenToClient,args = (client,address)).start()
+			threading.Thread(target = self.listenToClient,args = (client,address, client_name)).start()
 			
 
 		
 			
-	def listenToClient(self, client, address):
+	def listenToClient(self, client, address, client_name):
 		
 		
 		while self.close_self_flag:
@@ -77,12 +82,12 @@ class basicServer(base):
 				
 				if data:
 					# Set the response to echo back the recieved data 
-					print('Client Message:', data)
+					print(client_name, 'sent a message:', data)
 					string = str(datetime.datetime.now())
 					client.send(string.encode())
 					
 				else:
-					raise error('Client disconnected')
+					raise error(client_name, 'has disconnected')
 			except:
 				client.close()
 				return False
@@ -101,7 +106,7 @@ class basicServer(base):
 				
 					self.close_self_flag = 0
 					
-					for client, address in self.client_list:
+					for client in self.client_list:
 						client.close()
 						
 					self.sock.close()
@@ -112,12 +117,12 @@ class basicServer(base):
 				elif parsed_message[0] == 'send':
 					print(parsed_message[1])
 					
-				elif parsed_message[0] == 'sendall':
+				elif parsed_message[0] == 'broadcast':
 					for client in self.client_list:
-						client.send(message[1].encode())
+						client.send(parsed_message[1].encode())
 				
 				elif parsed_message[0] == 'swarm':
-					for client, address in self.client_list:
+					for client in self.client_list:
 						print(client)
 				
 		
@@ -135,4 +140,5 @@ if __name__ == "__main__":
 		except ValueError:
 			pass
 	'''
+	
 	basicServer('localhost', 8080).begin()

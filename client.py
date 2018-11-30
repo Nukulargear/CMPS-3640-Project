@@ -1,12 +1,17 @@
 from base import *
 
 class basicClient(base):
-	def __init__(self, name, port):
+	def __init__(self, name, port, client_name):
 		base.__init__(self, name, port, 'client')
 		
+		
+		self.client_name = client_name
 		self.sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 		self.server_address = ('localhost', int(self.port))
 		self.sock.connect(self.server_address)
+		
+		#sending client name to server_address
+		self.sock.sendall(client_name.encode())
 		
 		print('Connecting to {} port {}'.format(*self.server_address))
 		print('To close the connection, send [shutdown]')
@@ -66,13 +71,13 @@ class basicClient(base):
 	
 
 if __name__ == "__main__":
-	'''	
+	
 	while True:
-		port_num = input("Port? ")
+		client_name = input("Name? ")
 		try:
-			port_num = int(port_num)
+			client_name = client_name
 			break
 		except ValueError:
 			pass
-	'''
-	basicClient('localhost', 8080).begin()
+	
+	basicClient('localhost', 8080, client_name).begin()
