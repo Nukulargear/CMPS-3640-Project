@@ -5,13 +5,14 @@ class basicClient(base):
 		base.__init__(self, name, port, 'client')
 		
 		
-		self.client_name = client_name
+		self.client_name = 'client/' + client_name
+		print(self.client_name)
 		self.sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 		self.server_address = ('localhost', int(self.port))
 		self.sock.connect(self.server_address)
 		
 		#sending client name to server_address
-		self.sock.sendall(client_name.encode())
+		self.sock.sendall(self.client_name.encode())
 		
 		print('Connecting to {} port {}'.format(*self.server_address))
 		print('To close the connection, send [shutdown]')
@@ -30,7 +31,7 @@ class basicClient(base):
 	def listenToServer(self):
 		
 		while self.close_self_flag:
-			data = self.sock.recv(self.size).decode()
+			data = self.sock.recv(self.size).decode('utf-8')
 			if len(data) > 0:
 				print('Server Timestamp:', data)
 				
