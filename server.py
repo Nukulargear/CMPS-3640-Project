@@ -1,10 +1,15 @@
 from base import * 
 
-# Database
 # Things to do:
 # GUI
 # Server Promotion
-# Identifying Server Address
+#
+
+# command list:
+# scan 
+# broadcast {message}
+# swarm
+# shutdown
 
 
 '''
@@ -43,7 +48,7 @@ class basicServer(base):
 		
 		
 		self.client_list = []
-		
+		self.server_list = []
 	
 
 	def begin(self):
@@ -59,35 +64,35 @@ class basicServer(base):
 	
 		while self.close_self_flag:
 			
-			client, address = self.sock.accept()
+			connection, address = self.sock.accept()
 			
 	
 			#receive intitial name
 			try:
-				client_info = client.recv(self.size).decode('utf-8')
-				client_info = client_info.split("/")
-				client_type = client_info[0]
-				client_name = client_info[1]
+				connection_info = connection.recv(self.size).decode('utf-8')
+				connection_info = connection_info.split("/")
+				connection_type = connection_info[0]
+				connection_name = connection_info[1]
 			
 				
 	
 			
-				client.settimeout(60)
+				connection.settimeout(60)
 				
-				if client_type == 'client':
-					self.client_list.append([client, client_name])
-					
-
+				if connection_type == 'client':
+					self.client_list.append([connection, connection_name])
+					threading.Thread(target = self.listenToClient,args = (connection, address, connection_name)).start()
+					print('Client:', connection_name, connection, address)
 				
-					print('Client:', client_name, client, address)
-				
-				threading.Thread(target = self.listenToClient,args = (client,address, client_name)).start()
-				
-				
-			
+							
+				if connection_type == 'server':
+					if not (any(connection_name in server for server in self.server_list)):
+						self.server_list.append([connection, connection_name])
+						threading.Thread(target = self.listenToServer,args = (connection, address, connection_name)).start()
+						print('Server:', connection_name, connection, address)
 			
 			except:
-				print(client, ' does not conform to the '/' protocol .')
+				print(connection, ' does not conform to the '/' protocol .')
 			
 
 		
@@ -113,6 +118,26 @@ class basicServer(base):
 		
 		client.close()
 		
+	def listenToServer(self, server, address, server_name):
+					
+		while self.close_self_flag:
+			try:
+				data = server.recv(self.size).decode('utf-8')
+				
+				if data:
+					# Set the response to echo back the recieved data 
+					print(server_name, 'sent a message:', data)
+					string = str(datetime.datetime.now())
+					server.send(string.encode())
+					
+				else:
+					raise error(server_name, 'has disconnected')
+			except:
+				server.close()
+				return False
+		
+		server.close()
+		
 			
 	def userInput(self):
 		try:
@@ -136,13 +161,28 @@ class basicServer(base):
 				elif parsed_message[0] == 'scan':
 					self.portScanner()
 					
-				elif parsed_message[0] == 'broadcast':
+				elif parsed_message[0] == 'connect':
+					port = int(parsed_message[1])
+					self.connectToServer(port)
+					#threading.Thread(target = self.connectToServer,args = (port)).start()
+					
+					
+				elif parsed_message[0] == 'cbroadcast':
 					for client in self.client_list:
 						client[0].send(parsed_message[1].encode())
+						
+				elif parsed_message[0] == 'sbroadcast':
+					for server in self.server_list:
+						server[0].send(parsed_message[1].encode())		
 				
-				elif parsed_message[0] == 'swarm':
+				elif parsed_message[0] == 'clist':
+					print ('Client List:')
 					for client in self.client_list:
 						print(client[0])
+				elif parsed_message[0] == 'slist':
+					print ('Server List:')
+					for server in self.server_list:
+						print(server[0])
 				
 		
 		finally:
@@ -153,6 +193,7 @@ class basicServer(base):
 			for port in range(8080,8090):
 				if(port != self.port):
 					sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+			
 					result = sock.connect_ex(('localhost', port))
 					
 					if result == 0:
@@ -174,6 +215,31 @@ class basicServer(base):
 			print ("Couldn't connect to server")
 			sys.exit()
 
+			
+	def connectToServer(self, port):
+		try:
+			sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+
+			result = sock.connect(('localhost', port))
+			
+			# FIX
+			# self.server_list.append([connection, connection_name])
+			
+			sock.sendall(self.server_name.encode())
+			
+			
+	
+		except KeyboardInterrupt:
+			print ("You pressed Ctrl+C")
+			sys.exit()
+
+		except socket.gaierror:
+			print ('Hostname could not be resolved. Exiting')
+			sys.exit()
+
+		except socket.error:
+			print ("Couldn't connect to server")
+			sys.exit()
 	
 if __name__ == "__main__":
 	
