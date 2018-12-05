@@ -59,16 +59,15 @@ class Server(base):
 		self.sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
 		self.sock.bind((self.name, self.port))
 		
-		#create dictionary for server
-		self.client_list = {}
 		
+		self.client_list = []
+		#create dictionary for server
+		self.server_list = {}
 		
 		#temporary container for connection information
 		self.temporary_connection  = ['servername','send','receive']
 		
-		
-		self.server_receive_list = []
-		self.server_send_list = []
+
 
 	def begin(self):
 		threading.Thread(target = self.connectionManager,args = ()).start()
@@ -112,23 +111,27 @@ class Server(base):
 					threading.Thread(target = self.listenToClient,args = (connection, address, connection_name)).start()
 					print('Client connection received:', connection_name, connection, address)
 				
+				
 							
 				if connection_type == 'server':
-					if not (any(connection_name in server for server in self.server_receive_list)):
-						self.server_receive_list.append([connection, connection_name])
+		
+					if connection_name not in self.server_list:
+
 						threading.Thread(target = self.listenToServer,args = (connection, address, connection_name)).start()
 						print('Server connection received:', connection_name, connection, address)
 						
 						#now connect to the server as well to make it a two way connection
 						
-						if connection_port != None:
-							threading.Thread(target = self.connectToServer,args = (int(connection_port), '')).start()
-						
 						self.temporary_connection[0] = connection_name 						
 						self.temporary_connection[2] = connection 
-			
+						
+						if connection_port != None:
+							threading.Thread(target = self.connectToServer,args = (int(connection_port), 'end_handshake')).start()
+						else:
+							self.server_list[self.temporary_connection[0]] = (self.temporary_connection[1], self.temporary_connection[2])
+							self.temporary_connection  = ['servername','send','receive']
 			except:
-				print(connection, ' does not conform to the '/' protocol .')
+				print(connection, ' does not conform to the / protocol .')
 			
 
 		
@@ -149,8 +152,11 @@ class Server(base):
 				else:
 					raise error(client_name, 'has disconnected')
 			except:
+			
+			
 				self.client_list.remove([client, client_name])
-				#self.client_list = [i for i in self.client_list if i[1] != client_name]
+
+				
 				client.close()
 				return False
 		
@@ -172,7 +178,10 @@ class Server(base):
 				else:
 					raise error(server_name, 'has disconnected')
 			except:
-				self.server_receive_list.remove([server, server_name])
+				
+				self.server_list.pop(server_name)
+				
+				
 				server.close()
 				return False
 		
@@ -204,7 +213,7 @@ class Server(base):
 			elif parsed_message[0] == 'connect':
 				port = int(parsed_message[1])
 				#self.connectToServer(port)
-				threading.Thread(target = self.connectToServer,args = (port, 'handshake')).start()
+				threading.Thread(target = self.connectToServer,args = (port, 'initial_handshake')).start()
 				
 				
 			elif parsed_message[0] == 'cbroadcast':
@@ -212,12 +221,9 @@ class Server(base):
 					client[0].send(parsed_message[1].encode())
 					
 			elif parsed_message[0] == 'sbroadcast':
-				for server in self.server_send_list:
-					try:
-						server.sendall(parsed_message[1].encode())
-					except:
-						self.server_send_list.remove(server)
-						print('Failed to send message to:', server)
+				for socket in self.server_list.values():
+					socket[0].sendall(parsed_message[1].encode())
+					
 						
 			elif parsed_message[0] == 'clientlist':
 				print ('\nClient list:')
@@ -225,14 +231,8 @@ class Server(base):
 					print(client[0], client[1])
 					
 			elif parsed_message[0] == 'serverlist':
-				print ('\nServer listen list:')
-				for server in self.server_receive_list:
-					print(server[0])
-				print ('\nServer send list:')
-				for server in self.server_send_list:
-					print(server)
-				
-				print (self.temporary_connection)
+
+				print (self.server_list)
 			
 		
 
@@ -268,16 +268,15 @@ class Server(base):
 	def connectToServer(self, port, handshake_flag):
 	
 	#make to thread, and terminate when remote server shuts down
-	
+
+
 		try:
 			sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 			result = sock.connect(('localhost', port))
 			
 			
 			
-			self.server_send_list.append(sock)
-			
-			if handshake_flag == 'handshake':
+			if handshake_flag == 'initial_handshake':
 			
 				message = str(self.server_name) + '/' + str(self.port) 
 			
@@ -285,7 +284,13 @@ class Server(base):
 			else:
 				message = self.server_name
 				
+				
 			self.temporary_connection[1] = sock 
+			
+			if handshake_flag == 'end_handshake':
+				self.server_list[self.temporary_connection[0]] = (self.temporary_connection[1], self.temporary_connection[2])
+				self.temporary_connection  = ['servername','send','receive']
+			
 			
 		
 			sock.sendall(message.encode())
@@ -298,7 +303,10 @@ class Server(base):
 				string = 'Server keep alive thread'
 				sock.sendall(string.encode())
 				
-			self.server_send_list.remove(sock)		
+			'''
+			add remove socket entry for server dict
+			'''
+			
 	
 	
 	
