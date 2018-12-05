@@ -39,10 +39,11 @@ except Exception as e:
 '''
 # new class as it was difficult to manage the connections
 class serverConnection():
-	def __init__(self):
-		self.server_name = 'test'
-		self.listen_socket = None
+	def __init__(self, name):
+		self.server_name = name
 		self.send_socket = None
+		self.listen_socket = None
+
 
 	def __repr__(self): #sorting/debugging
 		return str(self.server_name)	
@@ -58,11 +59,14 @@ class Server(base):
 		self.sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
 		self.sock.bind((self.name, self.port))
 		
+		#create dictionary for server
+		self.client_list = {}
 		
 		
+		#temporary container for connection information
+		self.temporary_connection  = ['servername','send','receive']
 		
-		self.client_list = []
-		#self.server_list = []
+		
 		self.server_receive_list = []
 		self.server_send_list = []
 
@@ -119,6 +123,9 @@ class Server(base):
 						
 						if connection_port != None:
 							threading.Thread(target = self.connectToServer,args = (int(connection_port), '')).start()
+						
+						self.temporary_connection[0] = connection_name 						
+						self.temporary_connection[2] = connection 
 			
 			except:
 				print(connection, ' does not conform to the '/' protocol .')
@@ -224,7 +231,8 @@ class Server(base):
 				print ('\nServer send list:')
 				for server in self.server_send_list:
 					print(server)
-					
+				
+				print (self.temporary_connection)
 			
 		
 
@@ -265,16 +273,20 @@ class Server(base):
 			sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 			result = sock.connect(('localhost', port))
 			
+			
+			
 			self.server_send_list.append(sock)
 			
 			if handshake_flag == 'handshake':
+			
 				message = str(self.server_name) + '/' + str(self.port) 
+			
 				
 			else:
 				message = self.server_name
 				
-		
-			#print(message)
+			self.temporary_connection[1] = sock 
+			
 		
 			sock.sendall(message.encode())
 			
