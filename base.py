@@ -20,5 +20,6 @@ class base(object):
 		self.type = type
 		self.size = 1024
 		self.close_self_flag = 1
+		self.sleep_timer = 10
 		
 		print(self.type, ':', self.port, 'is setting up.')

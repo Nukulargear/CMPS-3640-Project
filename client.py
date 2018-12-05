@@ -1,6 +1,6 @@
 from base import *
 
-class basicClient(base):
+class Client(base):
 	def __init__(self, name, port, client_name):
 		base.__init__(self, name, port, 'client')
 		
@@ -41,9 +41,9 @@ class basicClient(base):
 	def keepAlive(self):
 
 		while self.close_self_flag:
-			time.sleep(10)
-			string = 'Keep Alive thread'
-			self.sock.sendall(string.encode())
+			time.sleep(self.sleep_timer)
+			#string = 'Client keep alive thread'
+			#self.sock.sendall(string.encode())
 		
 		
 			
@@ -81,4 +81,4 @@ if __name__ == "__main__":
 		except ValueError:
 			pass
 	
-	basicClient('localhost', 8080, client_name).begin()
+	Client('localhost', 8080, client_name).begin()
