@@ -82,20 +82,15 @@ class Server(base):
 		
 	def connectionManager(self):
 		self.sock.listen(5)
-	
 		while self.close_self_flag:
 			
 			connection, address = self.sock.accept()
-		
 			connection_command_value = None
-			connection_command = None
-		
+			connection_command = None		
 			#receive intitial name
-			try:
-				
+			try:		
 				connection_info = connection.recv(self.size).decode('utf-8')
 				connection_info = connection_info.split("/")
-		
 				
 				try:
 					connection_command_value = connection_info[3]	
@@ -106,20 +101,15 @@ class Server(base):
 					connection_command = connection_info[2]	
 				except:
 					pass
-					
-			
+							
 				connection_name = connection_info[1]
 				connection_type = connection_info[0]
-			
-		
 				#connection.settimeout(60)
 				
 				if connection_type == 'client':
 					self.client_list.append([connection, connection_name])
 					self.global_client_list.append(connection_name)
-				
-					
-					
+														
 					threading.Thread(target = self.listenToClient,args = (connection, address, connection_name)).start()
 					print('Client connection received:', connection_name, connection, address)
 					
@@ -127,8 +117,7 @@ class Server(base):
 					
 					self.server_write_flag = 1
 					
-					#print(bool(self.server_write_flag),  not self.other_server_write_flag)
-				
+					#print(bool(self.server_write_flag),  not self.other_server_write_flag)				
 							
 				if connection_type == 'server':
 		
@@ -150,8 +139,6 @@ class Server(base):
 			except:
 				#ignore messages that do not comply with the / protocol
 				pass
-			
-
 		
 			
 	def listenToClient(self, client, address, client_name):

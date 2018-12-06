@@ -61,12 +61,6 @@ class Client(base):
 					self.sock.close()
 					sys.exit(0)
 				
-				elif parsed_message[0] == 'send':
-					print(parsed_message[1])
-					
-				
-				elif parsed_message[0] == 'scan':
-					self.portScanner()
 				
 				else:	
 					self.sock.sendall(message.encode())
