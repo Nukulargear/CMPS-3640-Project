@@ -50,7 +50,8 @@ class Client(base):
 	def userInput(self):
 		try:
 			while self.close_self_flag:
-				message = (input(""))
+				#message = (input(str(self.name) + ": "))
+				message = input("")
 				parsed_message = message.split("/")
 				
 				#print('Sending {!r}'.format(message))

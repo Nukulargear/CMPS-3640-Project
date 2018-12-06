@@ -2,7 +2,7 @@ from base import *
 
 # Things to do:
 # GUI integration
-# Server Promotion
+# sharing of global client list
 #
 
 # command list:
@@ -14,38 +14,40 @@ from base import *
 # clientlist - shows all connected clients
 # shutdown
 
-#server port range 8080-8090
+#server port range
 min_port_range = 8080
 max_port_range = 8090
 
 temporary_con =  ['servername','send_port','listen_port', 00000]
 
-'''
-try:
-	connect_str = "dbname='oxysquare' user='pi' host='sharadeos.ddns.net' " + \
-				"password='Dol0Rubx'"
-	# use our connection values to establish a connection
-	conn = psycopg2.connect(connect_str)
-	# create a psycopg2 cursor that can execute queries
-	cursor = conn.cursor()
-	# create a new table with a single column called "name"
-	cursor.execute("""SELECT * from test_account""")
-	rows = cursor.fetchall()
-	print ("\nCurrent Database Entry:")
-	
-	for row in rows:
-		print ("   ", row[0], row[1])
-	
-except Exception as e:
-	print("Failed to Connect to Database Server")
-	print(e)
+def connectDatabase():
 
-'''
+	try:
+		connect_str = "dbname='oxysquare' user='pi' host='sharadeos.ddns.net' " + \
+					"password='Dol0Rubx'"
+		# use our connection values to establish a connection
+		conn = psycopg2.connect(connect_str)
+		# create a psycopg2 cursor that can execute queries
+		cursor = conn.cursor()
+		# create a new table with a single column called "name"
+		cursor.execute("""SELECT * from test_account""")
+		rows = cursor.fetchall()
+		print ("\nCurrent Database Entry:")
+		
+		for row in rows:
+			print ("   ", row[0], row[1])
+		
+	except Exception as e:
+		print("Failed to Connect to Database Server")
+		print(e)
+
+
 
 class Server(base):
 	def __init__(self, name, port, server_name):
 		base.__init__(self, name, port, 'server')
 
+		self.own_server_name = server_name #inconsistency for now
 		self.server_name = 'server/' + server_name
 		print(self.server_name)
 		self.sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -56,6 +58,10 @@ class Server(base):
 		self.client_list = []
 		#dictionary for server
 		self.server_list = {}
+		
+		
+		#local client list to be combined with global 
+		self.local_client_list = []
 		
 		#global client list
 		self.global_client_list = []
@@ -116,9 +122,12 @@ class Server(base):
 					
 					threading.Thread(target = self.listenToClient,args = (connection, address, connection_name)).start()
 					print('Client connection received:', connection_name, connection, address)
+					
 					#inform all the servers that this server wants to update the global list
 					
 					self.server_write_flag = 1
+					
+					#print(bool(self.server_write_flag),  not self.other_server_write_flag)
 				
 							
 				if connection_type == 'server':
@@ -160,6 +169,11 @@ class Server(base):
 					#print('Sending Message to Servers:', message)
 					for socket in self.server_list.values():
 						socket[0].sendall(message.encode())
+						
+					message = str(client_name) + ': ' + str(data)
+					#print('Sending to local clients:', message)					
+					for send_client in self.client_list:
+						send_client[0].send(message.encode())
 					
 				else:
 					raise error(client_name, 'has disconnected')
@@ -167,7 +181,7 @@ class Server(base):
 			
 			
 				self.client_list.remove([client, client_name])
-
+				self.global_client_list.remove(client_name)
 				
 				client.close()
 				return False
@@ -197,10 +211,42 @@ class Server(base):
 					except:
 						pass
 						
-	
+					#used for server communiation
 					if message_type_source == 'update':
 
 						print(server_name, 'is now', message_content)
+						self.other_server_write_flag = 1
+						
+						print(self.own_server_name, 'is now locked')
+						
+						message = 'server/lock/' + str(self.own_server_name) + ' is now locked'
+						
+						for socket in self.server_list.values():
+							socket[0].sendall(message.encode())
+						
+						
+						#update global client list	
+						#send global client list
+						print(self.own_server_name, 'has now finished updating the global client list.')
+						self.other_server_write_flag = 0
+						
+							
+						message = 'server/unlock/' + str(self.own_server_name) + ' is now unlocked' 
+						
+						for socket in self.server_list.values():
+							socket[0].sendall(message.encode())
+							
+					elif message_type_source == 'unlock':
+						print(message_content)
+						self.other_server_write_flag = 0
+						
+						
+						
+					elif message_type_source == 'lock':
+					
+						print(message_content)
+						self.other_server_write_flag = 1
+						
 					
 					elif message_source == 'client':
 						
@@ -369,12 +415,20 @@ class Server(base):
 				time.sleep(self.sleep_timer)
 				
 				
+				'''
+				Start Here for Mutual Exclusion
+				'''
+				
+				
 				if  self.server_write_flag and not self.other_server_write_flag :
-					message = str('server/update/updating table') 
+					message = str('server/update/requesting to lock.') 
 					sock.sendall(message.encode())
 					
 					
 					self.server_write_flag = 0
+					
+					
+					
 			'''
 			add remove socket entry for server dict?
 			'''
