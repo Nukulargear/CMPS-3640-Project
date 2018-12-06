@@ -1,7 +1,7 @@
 from base import * 
 
 # Things to do:
-# GUI
+# GUI integration
 # Server Promotion
 #
 
@@ -14,7 +14,11 @@ from base import *
 # clientlist - shows all connected clients
 # shutdown
 
-#sockets are listening ports one to many
+#server port range 8080-8090
+min_port_range = 8080
+max_port_range = 8090
+
+temporary_con =  ['servername','send_port','listen_port', 00000]
 
 '''
 try:
@@ -37,17 +41,6 @@ except Exception as e:
 	print(e)
 
 '''
-# new class as it was difficult to manage the connections
-class serverConnection():
-	def __init__(self, name):
-		self.server_name = name
-		self.send_socket = None
-		self.listen_socket = None
-
-
-	def __repr__(self): #sorting/debugging
-		return str(self.server_name)	
-
 
 class Server(base):
 	def __init__(self, name, port, server_name):
@@ -59,23 +52,27 @@ class Server(base):
 		self.sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
 		self.sock.bind((self.name, self.port))
 		
-		
+		#list for clients
 		self.client_list = []
-		#create dictionary for server
+		#dictionary for server
 		self.server_list = {}
 		
-		#temporary container for connection information
-		self.temporary_connection  = ['servername','send','receive']
+		#global client list
+		self.global_client_list = []
 		
+		#temporary container for connection information
+		self.temporary_connection  = temporary_con
 
-
+		#network flags
+		self.server_write_flag = 0
+		self.other_server_write_flag = 0 #if it is 1, then current server cannot send its curren client list.
+		
+		
+		
 	def begin(self):
 		threading.Thread(target = self.connectionManager,args = ()).start()
-		
+		threading.Thread(target = self.autoPortConnect,args = ()).start()
 		self.userInput()
-		
-	
-	
 		
 	def connectionManager(self):
 		self.sock.listen(5)
@@ -84,18 +81,23 @@ class Server(base):
 			
 			connection, address = self.sock.accept()
 		
-			
-			connection_port = None
-	
+			connection_command_value = None
+			connection_command = None
+		
 			#receive intitial name
 			try:
 				
 				connection_info = connection.recv(self.size).decode('utf-8')
 				connection_info = connection_info.split("/")
 		
-		
+				
 				try:
-					connection_port = connection_info[2]	
+					connection_command_value = connection_info[3]	
+				except:
+					pass
+				
+				try:
+					connection_command = connection_info[2]	
 				except:
 					pass
 					
@@ -108,9 +110,15 @@ class Server(base):
 				
 				if connection_type == 'client':
 					self.client_list.append([connection, connection_name])
+					self.global_client_list.append(connection_name)
+				
+					
+					
 					threading.Thread(target = self.listenToClient,args = (connection, address, connection_name)).start()
 					print('Client connection received:', connection_name, connection, address)
-				
+					#inform all the servers that this server wants to update the global list
+					
+					self.server_write_flag = 1
 				
 							
 				if connection_type == 'server':
@@ -125,19 +133,19 @@ class Server(base):
 						self.temporary_connection[0] = connection_name 						
 						self.temporary_connection[2] = connection 
 						
-						if connection_port != None:
-							threading.Thread(target = self.connectToServer,args = (int(connection_port), 'end_handshake')).start()
+						if connection_command == 'connect':
+							threading.Thread(target = self.connectToServer,args = (int(connection_command_value), 'end_handshake')).start()
 						else:
-							self.server_list[self.temporary_connection[0]] = (self.temporary_connection[1], self.temporary_connection[2])
-							self.temporary_connection  = ['servername','send','receive']
+							self.server_list[self.temporary_connection[0]] = (self.temporary_connection[1], self.temporary_connection[2], self.temporary_connection[3])
+							self.temporary_connection  = temporary_con
 			except:
-				print(connection, ' does not conform to the / protocol .')
+				#ignore messages that do not comply with the / protocol
+				pass
 			
 
 		
 			
 	def listenToClient(self, client, address, client_name):
-		
 		
 		while self.close_self_flag:
 			try:
@@ -145,9 +153,13 @@ class Server(base):
 				
 				if data:
 					# Set the response to echo back the recieved data 
-					print(client_name, 'sent a message:', data)
-					string = str(datetime.datetime.now())
-					client.send(string.encode())
+					print(client_name, ':', data)
+			
+					# propagating message to other servers
+					message = 'client/' + str(client_name) + '/' + str(data)
+					#print('Sending Message to Servers:', message)
+					for socket in self.server_list.values():
+						socket[0].sendall(message.encode())
 					
 				else:
 					raise error(client_name, 'has disconnected')
@@ -166,22 +178,45 @@ class Server(base):
 	def listenToServer(self, server, address, server_name):
 					
 		while self.close_self_flag:
+		
+			message_source = None
+			message_type_source = None
+			message_content = None
+		
 			try:
 				data = server.recv(self.size).decode('utf-8')
 				
+			
+				
 				if data:
-					# Set the response to echo back the recieved data 
-					print(server_name, 'sent a message:', data)
-					string = str(datetime.datetime.now())
-					server.send(string.encode())
+					try:
+						message_data = data.split("/")
+						message_source = message_data[0]
+						message_type_source = message_data[1]
+						message_content = message_data[2]
+					except:
+						pass
+						
+	
+					if message_type_source == 'update':
+
+						print(server_name, 'is now', message_content)
+					
+					elif message_source == 'client':
+						
+						message = str(message_type_source) + ': ' + str(message_content)
+						
+						for client in self.client_list:
+							client[0].send(message.encode())
+					
+					else:
+						print(server_name, ':', data)
 					
 				else:
 					raise error(server_name, 'has disconnected')
 			except:
-				
+				print('Failure Occured')
 				self.server_list.pop(server_name)
-				
-				
 				server.close()
 				return False
 		
@@ -232,14 +267,16 @@ class Server(base):
 					
 			elif parsed_message[0] == 'serverlist':
 
-				print (self.server_list)
-			
+				#print (self.server_list)
+				for servername, connection_info, in self.server_list.items():
+					print(servername, connection_info[2])
 		
-
 			
 	def portScanner(self):
+	
+
 		try:
-			for port in range(8080,8090):
+			for port in range(min_port_range,max_port_range):
 				if(port != self.port):
 					sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 			
@@ -248,7 +285,10 @@ class Server(base):
 					if result == 0:
 						
 						print ("Port {", format(port), "]:  Open")
-						sock.sendall(self.server_name.encode())
+						#sock.sendall(self.server_name.encode())
+						
+						
+						
 						
 						sock.close()
 
@@ -258,17 +298,43 @@ class Server(base):
 
 		except socket.gaierror:
 			print ('Hostname could not be resolved. Exiting')
-			sys.exit()
+
 
 		except socket.error:
 			print ("Couldn't connect to server")
-			sys.exit()
+		
+				
+	def autoPortConnect(self):
+		time.sleep(5)
+		while self.close_self_flag:
 
+			try:
+				for port in range(min_port_range,max_port_range):
+					if(port != self.port):
+						connected_server_ports = []
+						for servername, connection_info, in self.server_list.items():
+							
+							connected_server_ports.append(connection_info[2])
+							
+						sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+				
+						result = sock.connect_ex(('localhost', port))
+						
+						sock.close()
+						if result == 0 and port not in connected_server_ports:
+
+							#print ("Port {", format(port), "]:  Connecting")
+							threading.Thread(target = self.connectToServer,args = (port, 'initial_handshake')).start()
+					
+									
+									
+			except socket.error:
+				print ("Couldn't ping server.")
+				
+			time.sleep(5)
 			
 	def connectToServer(self, port, handshake_flag):
 	
-	#make to thread, and terminate when remote server shuts down
-
 
 		try:
 			sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -278,18 +344,19 @@ class Server(base):
 			
 			if handshake_flag == 'initial_handshake':
 			
-				message = str(self.server_name) + '/' + str(self.port) 
+				message = str(self.server_name) + '/connect/' + str(self.port) 
 			
 				
 			else:
 				message = self.server_name
 				
 				
-			self.temporary_connection[1] = sock 
+			self.temporary_connection[1] = sock
+			self.temporary_connection[3] = sock.getpeername()[1] 			
 			
 			if handshake_flag == 'end_handshake':
-				self.server_list[self.temporary_connection[0]] = (self.temporary_connection[1], self.temporary_connection[2])
-				self.temporary_connection  = ['servername','send','receive']
+				self.server_list[self.temporary_connection[0]] = (self.temporary_connection[1], self.temporary_connection[2], self.temporary_connection[3])
+				self.temporary_connection  = temporary_con
 			
 			
 		
@@ -297,14 +364,19 @@ class Server(base):
 			
 			print('Establishing connection with', sock)
 			
-			
+			#handler for consistency changes
 			while self.close_self_flag:
 				time.sleep(self.sleep_timer)
-				string = 'Server keep alive thread'
-				sock.sendall(string.encode())
 				
+				
+				if  self.server_write_flag and not self.other_server_write_flag :
+					message = str('server/update/updating table') 
+					sock.sendall(message.encode())
+					
+					
+					self.server_write_flag = 0
 			'''
-			add remove socket entry for server dict
+			add remove socket entry for server dict?
 			'''
 			
 	
@@ -319,7 +391,6 @@ class Server(base):
 			
 
 		except socket.error:
-			self.server_send_list.remove(sock)		
 			print ("Couldn't connect to:", sock)
 			
 	
@@ -334,4 +405,4 @@ if __name__ == "__main__":
 			pass
 	
 	
-	Server('localhost', port_num, 'Server' + str(random.randint(1,101))).begin()
+	Server('localhost', port_num, 'server' + str(random.randint(1,101))).begin()

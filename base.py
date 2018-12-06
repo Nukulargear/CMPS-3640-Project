@@ -8,6 +8,7 @@ import time
 import random
 from _thread import *
 import subprocess # port scanner
+import pickle # for sending lists
 
 
 
@@ -23,3 +24,5 @@ class base(object):
 		self.sleep_timer = 10
 		
 		print(self.type, ':', self.port, 'is setting up.')
+		
+		

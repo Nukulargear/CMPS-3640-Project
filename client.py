@@ -33,7 +33,7 @@ class Client(base):
 		while self.close_self_flag:
 			data = self.sock.recv(self.size).decode('utf-8')
 			if len(data) > 0:
-				print('Server Timestamp:', data)
+				print(data)
 				
 	
 		
@@ -62,6 +62,10 @@ class Client(base):
 				
 				elif parsed_message[0] == 'send':
 					print(parsed_message[1])
+					
+				
+				elif parsed_message[0] == 'scan':
+					self.portScanner()
 				
 				else:	
 					self.sock.sendall(message.encode())
@@ -75,10 +79,12 @@ if __name__ == "__main__":
 	
 	while True:
 		client_name = input("Name? ")
+		port_num = input("Port? ")
 		try:
 			client_name = client_name
+			port_num = int(port_num)
 			break
 		except ValueError:
 			pass
 	
-	Client('localhost', 8080, client_name).begin()
+	Client('localhost', port_num, client_name).begin()
